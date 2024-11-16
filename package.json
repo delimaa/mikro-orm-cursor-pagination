@@ -1,7 +1,11 @@
 {
   "name": "@delimaa/mikro-orm-cursor-pagination",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/delimaa/mikro-orm-cursor-paginate"
+  },
   "types": "./dist/index.d.ts",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
