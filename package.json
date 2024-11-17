@@ -24,7 +24,7 @@
     "test": "jest",
     "build": "tsup",
     "format": "prettier --write src/**/*.ts",
-    "publish": "yarn build && npm publish"
+    "prepublishOnly": "yarn build"
   },
   "devDependencies": {
     "@mikro-orm/core": "^5.0.0",
