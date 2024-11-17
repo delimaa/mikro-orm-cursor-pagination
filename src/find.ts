@@ -204,9 +204,10 @@ export async function cursorPaginationFind<T extends object, P extends string = 
       entities.pop(); // Remove the extra entity used to check if there is a next page
     }
 
+    const orderBy = cursor.buildOrderBy({ direction: 'forward' });
     const edges = entities.map((entity) => {
       return {
-        cursor: Cursor.fromEntity(entity, cursor.buildOrderBy({ direction: 'forward' })).toBase64(),
+        cursor: Cursor.fromEntity(entity, orderBy).toBase64(),
         node: entity,
       };
     });
@@ -248,9 +249,11 @@ export async function cursorPaginationFind<T extends object, P extends string = 
       entities.pop(); // Remove the extra entity used to check if there is a previous page
     }
 
+    // Yes, we generate orderBy in forward direction here, even if we are doing backward pagination.
+    const orderBy = cursor.buildOrderBy({ direction: 'forward' });
     const edges = entities.reverse().map((entity) => {
       return {
-        cursor: Cursor.fromEntity(entity, cursor.buildOrderBy({ direction: 'forward' })).toBase64(),
+        cursor: Cursor.fromEntity(entity, orderBy).toBase64(),
         node: entity,
       };
     });
