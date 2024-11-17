@@ -1,18 +1,11 @@
 import { EntityManager, EntityName, FilterQuery, FindOptions, Loaded, QueryOrderMap } from '@mikro-orm/core';
 import { Cursor } from './cursor';
 
-export type AfterCursorPaginationParams = {
-  first: number;
-  after: string;
-};
-
-export type BeforeCursorPaginationParams = {
-  last: number;
-  before: string;
-};
-
-export type NoCursorPaginationParams<T extends object> = {
-  first: number;
+export type PaginationParams<T extends object> = {
+  first?: number;
+  after?: string;
+  last?: number;
+  before?: string;
   /**
    * Order by has been moved here (instead of being in native MikroORM options)
    * because it is required for the pagination to work when doing an initial query without cursor.
@@ -40,13 +33,8 @@ export type NoCursorPaginationParams<T extends object> = {
    *   }
    * })
    */
-  orderBy: QueryOrderMap<T> | QueryOrderMap<T>[];
+  orderBy?: QueryOrderMap<T> | QueryOrderMap<T>[];
 };
-
-export type PaginationParams<T extends object> =
-  | AfterCursorPaginationParams
-  | BeforeCursorPaginationParams
-  | NoCursorPaginationParams<T>;
 
 export type CursorPaginationResult<T extends object, P extends string> = {
   totalCount: number;
@@ -133,55 +121,36 @@ export async function cursorPaginationFind<T extends object, P extends string = 
   where: FilterQuery<T> = {},
   options: Omit<FindOptions<T, P>, 'limit' | 'offset' | 'orderBy'> = {},
 ): Promise<CursorPaginationResult<T, P>> {
-  if ('after' in pagination && pagination.after && 'before' in pagination && pagination.before) {
+  if (pagination.after !== undefined && pagination.before !== undefined) {
     throw new Error(`Cannot use both 'after' and 'before' at the same time`);
   }
 
-  if ('first' in pagination && pagination.first && 'last' in pagination && pagination.last) {
+  if (pagination.first !== undefined && pagination.last !== undefined) {
     throw new Error(`Cannot use both 'first' and 'last' at the same time`);
   }
 
-  if ('first' in pagination && pagination.first < 0) {
+  if (pagination.first !== undefined && pagination.first < 0) {
     throw new Error(`'first' must be greater than or equal to 0`);
   }
 
-  if ('last' in pagination && pagination.last < 0) {
+  if (pagination.last !== undefined && pagination.last < 0) {
     throw new Error(`'last' must be greater than or equal to 0`);
   }
 
-  const noCursorPagination = 'orderBy' in pagination;
-  if (noCursorPagination) {
-    const [totalCount, entities] = await Promise.all([
-      em.count(entityName, { ...where }),
-      em.find(entityName, { ...where }, {
-        ...options,
-        limit: pagination.first,
-        orderBy: pagination.orderBy,
-      } as FindOptions<T, P>),
-    ]);
-
-    const edges = entities.map((entity) => {
-      return {
-        cursor: Cursor.fromEntity(entity, pagination.orderBy).toBase64(),
-        node: entity,
-      };
-    });
-
-    return {
-      totalCount,
-      edges,
-      pageInfo: {
-        hasNextPage: totalCount > pagination.first,
-        hasPreviousPage: false,
-        startCursor: edges[0]?.cursor,
-        endCursor: edges[edges.length - 1]?.cursor,
-      },
-    };
+  if (pagination.orderBy !== undefined) {
+    const emptyArray = Array.isArray(pagination.orderBy) && pagination.orderBy.length === 0;
+    const emptyObject = !Array.isArray(pagination.orderBy) && Object.keys(pagination.orderBy).length === 0;
+    if (emptyArray || emptyObject) {
+      throw new Error(`'orderBy' must be a non-empty object or array`);
+    }
   }
 
-  const forwardPagination = 'after' in pagination;
+  const forwardPagination = pagination.after !== undefined && pagination.first !== undefined;
   if (forwardPagination) {
-    const cursor = Cursor.fromBase64<T>(pagination.after);
+    const after = pagination.after!;
+    const first = pagination.first!;
+
+    const cursor = Cursor.fromBase64<T>(after);
 
     const paginationWhere = {
       $and: [{ ...where }, { $or: cursor.buildWhereOr({ direction: 'forward' }) }],
@@ -189,7 +158,7 @@ export async function cursorPaginationFind<T extends object, P extends string = 
 
     const paginationOptions = {
       ...options,
-      limit: pagination.first + 1, // Fetch one more to know if there is a next page
+      limit: first + 1, // Fetch one more to know if there is a next page
       orderBy: cursor.buildOrderBy({ direction: 'forward' }),
     } as FindOptions<T, P>;
 
@@ -199,7 +168,7 @@ export async function cursorPaginationFind<T extends object, P extends string = 
     ]);
 
     let hasNextPage = false;
-    if (entities.length === pagination.first + 1) {
+    if (entities.length === first + 1) {
       hasNextPage = true;
       entities.pop(); // Remove the extra entity used to check if there is a next page
     }
@@ -224,9 +193,12 @@ export async function cursorPaginationFind<T extends object, P extends string = 
     };
   }
 
-  const backwardPagination = 'before' in pagination;
+  const backwardPagination = pagination.before !== undefined && pagination.last !== undefined;
   if (backwardPagination) {
-    const cursor = Cursor.fromBase64<T>(pagination.before);
+    const before = pagination.before!;
+    const last = pagination.last!;
+
+    const cursor = Cursor.fromBase64<T>(before);
 
     const paginationWhere = {
       $and: [{ ...where }, { $or: cursor.buildWhereOr({ direction: 'backward' }) }],
@@ -234,7 +206,7 @@ export async function cursorPaginationFind<T extends object, P extends string = 
 
     const paginationOptions = {
       ...options,
-      limit: pagination.last + 1, // Fetch one more to know if there is a previous page
+      limit: last + 1, // Fetch one more to know if there is a previous page
       orderBy: cursor.buildOrderBy({ direction: 'backward' }),
     } as FindOptions<T, P>;
 
@@ -244,7 +216,7 @@ export async function cursorPaginationFind<T extends object, P extends string = 
     ]);
 
     let hasPreviousPage = false;
-    if (entities.length === pagination.last + 1) {
+    if (entities.length === last + 1) {
       hasPreviousPage = true;
       entities.pop(); // Remove the extra entity used to check if there is a previous page
     }
@@ -264,6 +236,39 @@ export async function cursorPaginationFind<T extends object, P extends string = 
       pageInfo: {
         hasNextPage: true,
         hasPreviousPage,
+        startCursor: edges[0]?.cursor,
+        endCursor: edges[edges.length - 1]?.cursor,
+      },
+    };
+  }
+
+  const noCursorPagination = pagination.orderBy !== undefined && pagination.first !== undefined;
+  if (noCursorPagination) {
+    const orderBy = pagination.orderBy!;
+    const first = pagination.first!;
+
+    const [totalCount, entities] = await Promise.all([
+      em.count(entityName, { ...where }),
+      em.find(entityName, { ...where }, {
+        ...options,
+        limit: pagination.first,
+        orderBy: pagination.orderBy,
+      } as FindOptions<T, P>),
+    ]);
+
+    const edges = entities.map((entity) => {
+      return {
+        cursor: Cursor.fromEntity(entity, orderBy).toBase64(),
+        node: entity,
+      };
+    });
+
+    return {
+      totalCount,
+      edges,
+      pageInfo: {
+        hasNextPage: totalCount > first,
+        hasPreviousPage: false,
         startCursor: edges[0]?.cursor,
         endCursor: edges[edges.length - 1]?.cursor,
       },

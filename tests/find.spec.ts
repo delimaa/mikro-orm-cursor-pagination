@@ -1,4 +1,4 @@
-import { MikroORM, ref } from '@mikro-orm/core';
+import { MikroORM, QueryOrderMap, ref } from '@mikro-orm/core';
 import { defineConfig, EntityManager } from '@mikro-orm/sqlite';
 import { Cursor } from '../src/cursor';
 import { cursorPaginationFind } from '../src/find';
@@ -302,5 +302,66 @@ describe('cursorPaginationFind', () => {
         }),
       ).rejects.toThrow();
     });
+  });
+
+  it('supports passing `orderBy` with `after` or `before` cursors. `orderBy` is ignored when their is an `after` or `before` cursor', async () => {
+    let first: number | undefined = 1;
+    let after: string | undefined;
+    let last: number | undefined;
+    let before: string | undefined;
+    let orderBy: QueryOrderMap<User> = { age: 'ASC', id: 'ASC' };
+
+    let page = await cursorPaginationFind(em, User, {
+      first,
+      after,
+      last,
+      before,
+      orderBy,
+    });
+
+    expect(page.edges[0].node.id).toBe(user2.id);
+
+    after = page.pageInfo.endCursor;
+
+    page = await cursorPaginationFind(em, User, {
+      first,
+      after,
+      last,
+      before,
+      orderBy,
+    });
+
+    expect(page.edges[0].node.id).toBe(user3.id);
+
+    first = undefined;
+    after = undefined;
+    last = 1;
+    before = page.pageInfo.startCursor;
+
+    page = await cursorPaginationFind(em, User, {
+      first,
+      after,
+      last,
+      before,
+      orderBy,
+    });
+
+    expect(page.edges[0].node.id).toBe(user2.id);
+  });
+
+  it('requires orderBy to be a non-empty object or array', async () => {
+    await expect(
+      cursorPaginationFind(em, User, {
+        first: 1,
+        orderBy: {},
+      }),
+    ).rejects.toThrow(new Error(`'orderBy' must be a non-empty object or array`));
+
+    await expect(
+      cursorPaginationFind(em, User, {
+        first: 1,
+        orderBy: [],
+      }),
+    ).rejects.toThrow(new Error(`'orderBy' must be a non-empty object or array`));
   });
 });
