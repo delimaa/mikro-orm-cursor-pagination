@@ -1,6 +1,6 @@
 {
   "name": "@delimaa/mikro-orm-cursor-pagination",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
@@ -23,7 +23,8 @@
   "scripts": {
     "test": "jest",
     "build": "tsup",
-    "format": "prettier --write src/**/*.ts"
+    "format": "prettier --write src/**/*.ts",
+    "publish": "yarn build && npm publish"
   },
   "devDependencies": {
     "@mikro-orm/core": "^5.0.0",
