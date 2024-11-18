@@ -364,4 +364,49 @@ describe('cursorPaginationFind', () => {
       }),
     ).rejects.toThrow(new Error(`'orderBy' must be a non-empty object or array`));
   });
+
+  it('handles null values in pagination params the same as undefined', async () => {
+    let first: number | null | undefined = 1;
+    let after: string | null | undefined = null;
+    let last: number | null | undefined = null;
+    let before: string | null | undefined = null;
+    let orderBy: QueryOrderMap<User> = { age: 'ASC', id: 'ASC' };
+
+    let page = await cursorPaginationFind(em, User, {
+      first,
+      after,
+      last,
+      before,
+      orderBy,
+    });
+
+    expect(page.edges[0].node.id).toBe(user2.id);
+
+    after = page.pageInfo.endCursor;
+
+    page = await cursorPaginationFind(em, User, {
+      first,
+      after,
+      last,
+      before,
+      orderBy,
+    });
+
+    expect(page.edges[0].node.id).toBe(user3.id);
+
+    first = null;
+    after = null;
+    last = 1;
+    before = page.pageInfo.startCursor;
+
+    page = await cursorPaginationFind(em, User, {
+      first,
+      after,
+      last,
+      before,
+      orderBy,
+    });
+
+    expect(page.edges[0].node.id).toBe(user2.id);
+  });
 });

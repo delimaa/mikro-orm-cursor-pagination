@@ -2,10 +2,10 @@ import { EntityManager, EntityName, FilterQuery, FindOptions, Loaded, QueryOrder
 import { Cursor } from './cursor';
 
 export type PaginationParams<T extends object> = {
-  first?: number;
-  after?: string;
-  last?: number;
-  before?: string;
+  first?: number | null;
+  after?: string | null;
+  last?: number | null;
+  before?: string | null;
   /**
    * Order by has been moved here (instead of being in native MikroORM options)
    * because it is required for the pagination to work when doing an initial query without cursor.
@@ -121,23 +121,23 @@ export async function cursorPaginationFind<T extends object, P extends string = 
   where: FilterQuery<T> = {},
   options: Omit<FindOptions<T, P>, 'limit' | 'offset' | 'orderBy'> = {},
 ): Promise<CursorPaginationResult<T, P>> {
-  if (pagination.after !== undefined && pagination.before !== undefined) {
+  if (pagination.after != null && pagination.before != null) {
     throw new Error(`Cannot use both 'after' and 'before' at the same time`);
   }
 
-  if (pagination.first !== undefined && pagination.last !== undefined) {
+  if (pagination.first != null && pagination.last != null) {
     throw new Error(`Cannot use both 'first' and 'last' at the same time`);
   }
 
-  if (pagination.first !== undefined && pagination.first < 0) {
+  if (pagination.first != null && pagination.first < 0) {
     throw new Error(`'first' must be greater than or equal to 0`);
   }
 
-  if (pagination.last !== undefined && pagination.last < 0) {
+  if (pagination.last != null && pagination.last < 0) {
     throw new Error(`'last' must be greater than or equal to 0`);
   }
 
-  if (pagination.orderBy !== undefined) {
+  if (pagination.orderBy != null) {
     const emptyArray = Array.isArray(pagination.orderBy) && pagination.orderBy.length === 0;
     const emptyObject = !Array.isArray(pagination.orderBy) && Object.keys(pagination.orderBy).length === 0;
     if (emptyArray || emptyObject) {
@@ -145,7 +145,7 @@ export async function cursorPaginationFind<T extends object, P extends string = 
     }
   }
 
-  const forwardPagination = pagination.after !== undefined && pagination.first !== undefined;
+  const forwardPagination = pagination.after != null && pagination.first != null;
   if (forwardPagination) {
     const after = pagination.after!;
     const first = pagination.first!;
@@ -193,7 +193,7 @@ export async function cursorPaginationFind<T extends object, P extends string = 
     };
   }
 
-  const backwardPagination = pagination.before !== undefined && pagination.last !== undefined;
+  const backwardPagination = pagination.before != null && pagination.last != null;
   if (backwardPagination) {
     const before = pagination.before!;
     const last = pagination.last!;
@@ -242,7 +242,7 @@ export async function cursorPaginationFind<T extends object, P extends string = 
     };
   }
 
-  const noCursorPagination = pagination.orderBy !== undefined && pagination.first !== undefined;
+  const noCursorPagination = pagination.orderBy != null && pagination.first != null;
   if (noCursorPagination) {
     const orderBy = pagination.orderBy!;
     const first = pagination.first!;
