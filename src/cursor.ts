@@ -1,5 +1,5 @@
 import { FilterQuery, QueryOrder, QueryOrderKeys, QueryOrderMap, wrap } from '@mikro-orm/core';
-import { set } from './utils';
+import { get, set } from './utils';
 
 type CursorState<T extends object> = [string, QueryOrderKeys<T>, any][];
 
@@ -49,33 +49,26 @@ export class Cursor<T extends object> {
     }
 
     const pojo = wrap(entity).toPOJO();
-
     const state: CursorState<T> = [];
 
+    const walkQueryOrderMap = (order: QueryOrderMap<T>, prevKeys: string[] = []) => {
+      Object.entries(order).forEach(([key, value]) => {
+        const currKeys = [...prevKeys, key];
+
+        if (typeof value === 'string') {
+          const strKey = currKeys.join('.');
+          const data = get(pojo, strKey);
+          state.push([strKey, value as QueryOrder, data]);
+        }
+
+        if (typeof value === 'object') {
+          walkQueryOrderMap(value as QueryOrderMap<T>, currKeys);
+        }
+      });
+    };
+
     const orderByArr: QueryOrderMap<T>[] = Array.isArray(orderBy) ? orderBy : [orderBy];
-
     orderByArr.forEach((order) => {
-      const walkQueryOrderMap = (order: QueryOrderMap<T>, prevKeys: string[] = []) => {
-        Object.entries(order).forEach(([key, value]) => {
-          const currKeys = [...prevKeys, key];
-
-          if (typeof value === 'string') {
-            const strKey = currKeys.join('.');
-
-            let data: any = pojo;
-            for (const key of currKeys) {
-              data = data[key];
-            }
-
-            state.push([strKey, value as QueryOrder, data]);
-          }
-
-          if (typeof value === 'object') {
-            walkQueryOrderMap(value as QueryOrderMap<T>, currKeys);
-          }
-        });
-      };
-
       walkQueryOrderMap(order);
     });
 
