@@ -48,7 +48,7 @@ export class Cursor<T extends object> {
       throw new Error('Cannot create cursor with empty orderBy');
     }
 
-    const pojo = wrap(entity).toPOJO();
+    const entityObject = wrap(entity).toObject();
     const state: CursorState<T> = [];
 
     const walkQueryOrderMap = (order: QueryOrderMap<T>, prevKeys: string[] = []) => {
@@ -57,7 +57,7 @@ export class Cursor<T extends object> {
 
         if (typeof value === 'string') {
           const strKey = currKeys.join('.');
-          const data = get(pojo, strKey);
+          const data = get(entityObject, strKey);
           state.push([strKey, value as QueryOrder, data]);
         }
 
