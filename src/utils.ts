@@ -3,7 +3,7 @@
  * Supports dot notation for nested path.
  * Automatically creates missing object paths.
  */
-export function set<T extends object>(o: T, path: string, value: any): void {
+export function set<T extends object>(o: T, path: string, value: any): T {
   const paths = path.split('.') as (keyof T)[];
   const lastPath = paths.pop();
 
@@ -13,6 +13,8 @@ export function set<T extends object>(o: T, path: string, value: any): void {
   });
 
   if (lastPath) o[lastPath] = value;
+
+  return o;
 }
 
 /**
