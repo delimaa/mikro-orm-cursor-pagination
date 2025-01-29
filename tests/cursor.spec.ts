@@ -31,7 +31,6 @@ let orm: MikroORM;
 beforeAll(async () => {
   orm = await MikroORM.init(
     defineConfig({
-      type: 'sqlite',
       dbName: ':memory:',
       entities: [User],
     }),

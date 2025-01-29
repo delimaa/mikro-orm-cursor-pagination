@@ -1,9 +1,8 @@
+# MikroORM Cursor Pagination
+
 ## Description
 
 Cursor pagination support for MikroORM following [Relay GraphQL Cursor Connections Specification](https://relay.dev/graphql/connections.htm).
-
-
-*NOTE: Since v6, MikroORM natively supports cursor based pagination using `em.findByCursor()`. As such, this package is not necessary for MikroORM v6. It is only relevant for projects in MikroORM v5.*
 
 ## Installation
 
@@ -24,8 +23,8 @@ class User {
   @Property()
   name!: string;
 
-  @Property()
-  age!: number;
+  @Property({ nullable: true })
+  age: number | null;
 
   @ManyToMany()
   friends = new Collection<User>(this);
@@ -39,9 +38,10 @@ let page = await cursorPaginationFind(
   {
     first: 10,
     orderBy: {
-      name: 'ASC',
-      age: 'DESC',
-      id: 'ASC',
+      name: QueryOrder.DESC,
+      // 👇 Supports NULL ordering by specifying NULLS_FIRST or NULLS_LAST order on nullable column
+      age: QueryOrder.ASC_NULLS_FIRST,
+      id: QueryOrder.ASC,
     },
   },
   // 👇 Pass any native MikroORM where condition
