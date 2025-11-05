@@ -1,8 +1,10 @@
 # MikroORM Cursor Pagination
 
-## Description
-
 Cursor pagination support for MikroORM following [Relay GraphQL Cursor Connections Specification](https://relay.dev/graphql/connections.htm).
+
+> [!NOTE]  
+> This library is not relevant for MikroORM v6 as the native `em.findByCursor()` is the recommended way for cursor pagination.
+> However, it is still useful for software using pre v6 versions.
 
 ## Installation
 
